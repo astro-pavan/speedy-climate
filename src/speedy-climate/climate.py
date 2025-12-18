@@ -1,0 +1,100 @@
+import pandas as pd
+import numpy as np
+
+import subprocess
+import os
+import shutil
+
+from constants import *
+
+HELIOS_PATH = ''
+
+def run_HELIOS(name: str, instellation: float, spectral_type: str, R_planet: float, M_planet: float, P_surface: float, P_CO2: float, P_H2O: float, albedo: float, recirculation_factor: float, verbose: bool=False) -> dict[str, object]:
+
+    g_surface = (G * M_planet) / (R_planet ** 2)
+
+    R_star = SPECTRAL_TYPE_DATA[spectral_type]['Radius']
+    T_star = SPECTRAL_TYPE_DATA[spectral_type]['Temperature']
+
+    orbital_distance = np.sqrt((((R_star * R_SUN) ** 2) * STEFAN_BOLTZMANN * (T_star ** 4)) / (instellation)) / AU
+
+    species_data = {
+        'species' : ['H2O', 'CO2'],
+        'absorbing' : ['yes', 'yes'],
+        'scattering' : ['yes', 'yes'],
+        'mixing_ratio' : [P_H2O / P_surface, P_CO2 / P_surface]
+    }
+        
+    species_df = pd.DataFrame(species_data)
+    species_df.to_csv(f'{HELIOS_PATH}/input/species_{name}.dat', sep='\t', index=False)
+
+    command = [f'.venv/bin/python', 'helios.py']
+
+    parameters = [
+        '-name', name,
+        '-boa_pressure', f'{P_surface / 10}',
+        '-f_factor', f'{recirculation_factor}',
+        # '-stellar_zenith_angle', f'{zenith_angle}',
+        '-surface_albedo', f'{albedo}',
+        '-surface_gravity', f'{g_surface * 100}',
+        '-radius_planet', f'{R_planet / R_JUPITER}',
+        '-path_to_species_file', f'./input/species_{name}.dat', 
+        '-radius_star', f'{R_star}',
+        '-temperature_star', f'{T_star}',
+        '-orbital_distance', f'{orbital_distance}'
+    ]
+
+    # env = os.environ.copy()
+
+    if verbose:
+        subprocess.run(command + parameters, cwd=HELIOS_PATH) 
+    else:
+        subprocess.run(command + parameters, cwd=HELIOS_PATH, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    try:
+        atm_df = pd.read_table(f'{HELIOS_PATH}/output/{name}/{name}_tp.dat', sep='\s+', skiprows=1)
+
+        # P = np.array(atm_df['press.[10^-6bar]']) * 10
+        T = np.array(atm_df['temp.[K]'])
+        # z = np.array(atm_df['altitude[cm]']) / 100
+
+        T_surface = float(T[0])
+
+        result_dict = {
+            "Run_ID": name,
+            # "Zenith_Angle": zenith_angle,
+            "Instellation (W/m^2)": instellation,
+            "Spectral_Type": spectral_type,
+            "R_Planet (m)": R_planet,
+            "M_Planet (kg)": M_planet,
+            "P_Surface (Pa)": P_surface,
+            "P_CO2 (Pa)": P_CO2,
+            "P_H2O (Pa)": P_H2O,
+            "Albedo": albedo,
+            "Recirculation_Factor": recirculation_factor,
+            "Surface_Temp (K)": T_surface,
+            "Status": "Success"
+        }
+
+    except Exception as e :
+        
+        result_dict = {
+            "Run_ID": name,
+            # "Zenith_Angle": zenith_angle,
+            "Instellation (W/m^2)": instellation,
+            "Spectral_Type": spectral_type,
+            "R_Planet (m)": R_planet,
+            "M_Planet (kg)": M_planet,
+            "P_Surface (Pa)": P_surface,
+            "P_CO2 (Pa)": P_CO2,
+            "P_H2O (Pa)": P_H2O,
+            "Albedo": albedo,
+            "Recirculation_Factor": recirculation_factor,
+            "Surface_Temp (K)": -1,
+            "Status": str(e)
+        }
+
+    shutil.rmtree(f'{HELIOS_PATH}/output/{name}', ignore_errors=True)
+    os.remove(f'{HELIOS_PATH}/input/species_{name}.dat')
+    
+    return result_dict
