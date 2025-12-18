@@ -9,8 +9,51 @@ import concurrent.futures
 from climate import run_HELIOS
 from constants import *
 
+def generate_input_parameters(n_samples, spectral_type, recirculation_factor):
 
-HELIOS_path = '/data/pt426/HELIOS'
+    param_bounds = {
+        'instellation': (0.1 * SOLAR_CONSTANT, 2.0 * SOLAR_CONSTANT),
+        'log_pressure': (4, 6),
+        'log_x_h2o': (-6, 0),
+        'log_x_co2': (-6, 0),
+        'albedo': (0, 0.5),
+    }
+
+    n_dimensions = len(param_bounds)
+    l_bounds = [b[0] for b in param_bounds.values()]
+    u_bounds = [b[1] for b in param_bounds.values()]
+
+    sampler = qmc.LatinHypercube(d=n_dimensions)
+
+    samples_unit_cube = sampler.random(n=n_samples)
+    samples_scaled = qmc.scale(samples_unit_cube, l_bounds, u_bounds)
+
+    inputs = []
+
+    for i, sample in enumerate(samples_scaled):
+
+        # Format: (name, instellation, spec_type, Rp, Mp, P_surf, x_CO2, x_H2O, alb, recirc)
+
+        p = 10 ** float(sample[1])
+        x_h2o = 10 ** float(sample[2])
+        x_co2 = 10 ** float(sample[3])
+        alb = float(sample[4])
+
+        sample_tuple = (f'run_{i}',
+                        float(sample[0]),
+                        spectral_type,
+                        1.0 * R_EARTH,
+                        1.0 * M_EARTH,
+                        p,
+                        x_co2, 
+                        x_h2o,
+                        alb,
+                        recirculation_factor)
+        
+        inputs.append(sample_tuple)
+
+    return inputs
+
 
 def run_batch_simulation(inputs, output_csv_name="helios_results.csv"):
     
@@ -46,56 +89,18 @@ def run_batch_simulation(inputs, output_csv_name="helios_results.csv"):
 
     if results_list:
         df = pd.DataFrame(results_list)
-        df.to_csv(output_csv_name, index=False)
+        df.to_csv(f'climate_data/{output_csv_name}', index=False)
         print(f"\nResults successfully saved to {output_csv_name}")
     else:
         print("No results were generated.")
-
-def generate_input_parameters(n_samples):
-
-    param_bounds = {
-        'instellation': (0.1 * SOLAR_CONSTANT, 1.5 * SOLAR_CONSTANT),
-        'log_p_co2': (-1, 5),
-        'log_p_h2o': (-1, 5),
-        'albedo': (0, 1.0),
-    }
-
-    n_dimensions = len(param_bounds)
-    l_bounds = [b[0] for b in param_bounds.values()]
-    u_bounds = [b[1] for b in param_bounds.values()]
-
-    sampler = qmc.LatinHypercube(d=n_dimensions)
-
-    samples_unit_cube = sampler.random(n=n_samples)
-    samples_scaled = qmc.scale(samples_unit_cube, l_bounds, u_bounds)
-
-    inputs = []
-
-    for i, sample in enumerate(samples_scaled):
-
-        # Format: (name, instellation, spec_type, Rp, Mp, P_surf, P_CO2, P_H2O, alb, recirc)
-        sample_tuple = (f'run_{i}', float(sample[0]), 'G2', 1.0 * R_EARTH, 1.0 * M_EARTH, 1e5, 10 ** float(sample[1]), 10 ** float(sample[2]), float(sample[3]), 0.25)
-        inputs.append(sample_tuple)
-
-    return inputs
         
 if __name__ == '__main__':
 
-    # Format: (name, instellation, spec_type, Rp, Mp, P_surf, P_CO2, P_H2O, alb, recirc)
-    inputs_example = [
-        ("Sim_01", 200, "G2", 1.0 * R_EARTH, 1.0 * M_EARTH, 1e5, 30, 100, 0.3, 0.25),
-        ("Sim_02", 400, "G2", 1.0 * R_EARTH, 1.0 * M_EARTH, 1e5, 30, 100, 0.3, 0.25),
-        ("Sim_03", 600, "G2", 1.0 * R_EARTH, 1.0 * M_EARTH, 1e5, 30, 100, 0.3, 0.25),
-        ("Sim_04", 800, "G2", 1.0 * R_EARTH, 1.0 * M_EARTH, 1e5, 30, 100, 0.3, 0.25),
-        #("Sim_05", 1000, "G2", 1.0 * R_EARTH, 1.0 * M_EARTH, 1e5, 30, 100, 0.3, 0.25),
-        #("Sim_06", 1200, "G2", 1.0 * R_EARTH, 1.0 * M_EARTH, 1e5, 30, 100, 0.3, 0.25),
-        #("Sim_07", 1400, "G2", 1.0 * R_EARTH, 1.0 * M_EARTH, 1e5, 30, 100, 0.3, 0.25),
-        #("Sim_08", 1600, "G2", 1.0 * R_EARTH, 1.0 * M_EARTH, 1e5, 30, 100, 0.3, 0.25),
-    ]
+    inputs = generate_input_parameters(10, 'G2', 0.25)
+    run_batch_simulation(inputs, 'helios_1000_runs_earth_rapid_rotator.csv')
 
-    run_HELIOS('test', 1.5 * SOLAR_CONSTANT, 'G2', R_EARTH, M_EARTH, EARTH_ATM, 0.9 * EARTH_ATM, 0.9 * EARTH_ATM, 0.0, 0.25, verbose=True)
+    inputs = generate_input_parameters(10, 'M5', 0.6666)
+    run_batch_simulation(inputs, 'helios_1000_runs_earth_tidally_locked.csv')
 
-    # run_batch_simulation(inputs)
 
-    # generate_input_parameters(10)
 	
