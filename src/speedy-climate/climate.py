@@ -43,7 +43,9 @@ def run_HELIOS(name: str, instellation: float, spectral_type: str, R_planet: flo
         '-path_to_species_file', f'./input/species_{name}.dat', 
         '-radius_star', f'{R_star}',
         '-temperature_star', f'{T_star}',
-        '-orbital_distance', f'{orbital_distance}'
+        '-orbital_distance', f'{orbital_distance}',
+        '-directory_with_opacity_files', '../opacity_data/',
+        '-number_of_layers', '25'
     ]
 
     env = os.environ.copy()
@@ -73,8 +75,8 @@ def run_HELIOS(name: str, instellation: float, spectral_type: str, R_planet: flo
             "R_Planet (m)": R_planet,
             "M_Planet (kg)": M_planet,
             "P_Surface (Pa)": P_surface,
-            "x_CO2 (Pa)": x_CO2,
-            "x_H2O (Pa)": x_H2O,
+            "x_CO2": x_CO2,
+            "x_H2O": x_H2O,
             "Albedo": albedo,
             "Recirculation_Factor": recirculation_factor,
             "Surface_Temp (K)": T_surface,
@@ -91,8 +93,8 @@ def run_HELIOS(name: str, instellation: float, spectral_type: str, R_planet: flo
             "R_Planet (m)": R_planet,
             "M_Planet (kg)": M_planet,
             "P_Surface (Pa)": P_surface,
-            "x_CO2 (Pa)": x_CO2,
-            "x_H2O (Pa)": x_H2O,
+            "x_CO2": x_CO2,
+            "x_H2O": x_H2O,
             "Albedo": albedo,
             "Recirculation_Factor": recirculation_factor,
             "Surface_Temp (K)": -1,
