@@ -9,7 +9,7 @@ from constants import *
 
 WD = os.getcwd()
 
-HELIOS_PATH = f'{WD}/helios/'
+HELIOS_PATH = f'{WD}/helios'
 
 def run_HELIOS(name: str, instellation: float, spectral_type: str, R_planet: float, M_planet: float, P_surface: float, x_CO2: float, x_H2O: float, albedo: float, recirculation_factor: float, verbose: bool=False) -> dict[str, object]:
 
@@ -44,14 +44,20 @@ def run_HELIOS(name: str, instellation: float, spectral_type: str, R_planet: flo
         '-radius_star', f'{R_star}',
         '-temperature_star', f'{T_star}',
         '-orbital_distance', f'{orbital_distance}',
-        '-directory_with_opacity_files', '../opacity_data/',
-        '-number_of_layers', '25'
+        '-directory_with_opacity_files', f'{WD}/opacity_data/',
+        '-opacity_mixing', 'on-the-fly',
+        '-stellar_spectral_model', 'blackbody',
+        '-realtime_plotting', 'no',
+        '-planet', 'manual',
+        '-planet_type', 'rocky',
+        '-number_of_layers', '25',
+        '-k_coefficients_mixing_method', 'correlated-k'
     ]
 
     env = os.environ.copy()
-    # env["PATH"] = CUDA_path + ":" + env["PATH"]
-    # env["LD_LIBRARY_PATH"] = CUDA_LD_path + ":" + env.get("LD_LIBRARY_PATH", "")
-    # env["DYLD_LIBRARY_PATH"] = CUDA_DYLD_path + ":" + env.get("LD_LIBRARY_PATH", "")
+    env["PATH"] = '/data/pt426/cuda/cuda12/bin' + ":" + env["PATH"]
+    env["LD_LIBRARY_PATH"] = '/data/pt426/cuda/cuda12/lib64' + ":" + env.get("LD_LIBRARY_PATH", "")
+    env["DYLD_LIBRARY_PATH"] = '/data/pt426/cuda/cuda12/lib' + ":" + env.get("LD_LIBRARY_PATH", "")
 
     if verbose:
         subprocess.run(command + parameters, cwd=HELIOS_PATH, env=env) 
@@ -59,7 +65,7 @@ def run_HELIOS(name: str, instellation: float, spectral_type: str, R_planet: flo
         subprocess.run(command + parameters, cwd=HELIOS_PATH, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     try:
-        atm_df = pd.read_table(f'{HELIOS_PATH}/output/{name}/{name}_tp.dat', sep='/s+', skiprows=1)
+        atm_df = pd.read_table(f'{HELIOS_PATH}/output/{name}/{name}_tp.dat', sep='/s+', skiprows=1, engine='python')
 
         # P = np.array(atm_df['press.[10^-6bar]']) * 10
         T = np.array(atm_df['temp.[K]'])
