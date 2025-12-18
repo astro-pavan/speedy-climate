@@ -68,7 +68,7 @@ def make_GP_emulator(data_path):
     # 2. Visual Check (Optional but recommended)
 
     # Predict on validation data
-    y_val_pred, y_val_std = gaussian_process.predict(X_val_scaled, return_std=True)
+    y_val_pred, y_val_std = gaussian_process.predict(X_val_scaled, return_std=True) # type: ignore
 
     # Plot Actual vs Predicted
     plt.figure(figsize=(6, 6))
