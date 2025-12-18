@@ -1,3 +1,6 @@
+*kdistr.h5
+opacity_data/scat_cross_sections.h5
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
