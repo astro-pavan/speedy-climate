@@ -7,9 +7,11 @@ import shutil
 
 from constants import *
 
-HELIOS_PATH = ''
+WD = os.getcwd()
 
-def run_HELIOS(name: str, instellation: float, spectral_type: str, R_planet: float, M_planet: float, P_surface: float, P_CO2: float, P_H2O: float, albedo: float, recirculation_factor: float, verbose: bool=False) -> dict[str, object]:
+HELIOS_PATH = f'{WD}/helios/'
+
+def run_HELIOS(name: str, instellation: float, spectral_type: str, R_planet: float, M_planet: float, P_surface: float, x_CO2: float, x_H2O: float, albedo: float, recirculation_factor: float, verbose: bool=False) -> dict[str, object]:
 
     g_surface = (G * M_planet) / (R_planet ** 2)
 
@@ -22,13 +24,13 @@ def run_HELIOS(name: str, instellation: float, spectral_type: str, R_planet: flo
         'species' : ['H2O', 'CO2'],
         'absorbing' : ['yes', 'yes'],
         'scattering' : ['yes', 'yes'],
-        'mixing_ratio' : [P_H2O / P_surface, P_CO2 / P_surface]
+        'mixing_ratio' : [x_H2O, x_CO2]
     }
         
     species_df = pd.DataFrame(species_data)
     species_df.to_csv(f'{HELIOS_PATH}/input/species_{name}.dat', sep='\t', index=False)
 
-    command = [f'.venv/bin/python', 'helios.py']
+    command = [f'{WD}/.venv/bin/python', 'helios.py']
 
     parameters = [
         '-name', name,
@@ -44,15 +46,18 @@ def run_HELIOS(name: str, instellation: float, spectral_type: str, R_planet: flo
         '-orbital_distance', f'{orbital_distance}'
     ]
 
-    # env = os.environ.copy()
+    env = os.environ.copy()
+    # env["PATH"] = CUDA_path + ":" + env["PATH"]
+    # env["LD_LIBRARY_PATH"] = CUDA_LD_path + ":" + env.get("LD_LIBRARY_PATH", "")
+    # env["DYLD_LIBRARY_PATH"] = CUDA_DYLD_path + ":" + env.get("LD_LIBRARY_PATH", "")
 
     if verbose:
-        subprocess.run(command + parameters, cwd=HELIOS_PATH) 
+        subprocess.run(command + parameters, cwd=HELIOS_PATH, env=env) 
     else:
-        subprocess.run(command + parameters, cwd=HELIOS_PATH, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(command + parameters, cwd=HELIOS_PATH, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     try:
-        atm_df = pd.read_table(f'{HELIOS_PATH}/output/{name}/{name}_tp.dat', sep='\s+', skiprows=1)
+        atm_df = pd.read_table(f'{HELIOS_PATH}/output/{name}/{name}_tp.dat', sep='/s+', skiprows=1)
 
         # P = np.array(atm_df['press.[10^-6bar]']) * 10
         T = np.array(atm_df['temp.[K]'])
@@ -68,8 +73,8 @@ def run_HELIOS(name: str, instellation: float, spectral_type: str, R_planet: flo
             "R_Planet (m)": R_planet,
             "M_Planet (kg)": M_planet,
             "P_Surface (Pa)": P_surface,
-            "P_CO2 (Pa)": P_CO2,
-            "P_H2O (Pa)": P_H2O,
+            "x_CO2 (Pa)": x_CO2,
+            "x_H2O (Pa)": x_H2O,
             "Albedo": albedo,
             "Recirculation_Factor": recirculation_factor,
             "Surface_Temp (K)": T_surface,
@@ -86,8 +91,8 @@ def run_HELIOS(name: str, instellation: float, spectral_type: str, R_planet: flo
             "R_Planet (m)": R_planet,
             "M_Planet (kg)": M_planet,
             "P_Surface (Pa)": P_surface,
-            "P_CO2 (Pa)": P_CO2,
-            "P_H2O (Pa)": P_H2O,
+            "x_CO2 (Pa)": x_CO2,
+            "x_H2O (Pa)": x_H2O,
             "Albedo": albedo,
             "Recirculation_Factor": recirculation_factor,
             "Surface_Temp (K)": -1,
@@ -98,3 +103,6 @@ def run_HELIOS(name: str, instellation: float, spectral_type: str, R_planet: flo
     os.remove(f'{HELIOS_PATH}/input/species_{name}.dat')
     
     return result_dict
+
+if __name__ == '__main__':
+    print(run_HELIOS('test', 1.5 * SOLAR_CONSTANT, 'G2', R_EARTH, M_EARTH, EARTH_ATM, 0.9 * EARTH_ATM, 0.9 * EARTH_ATM, 0.0, 0.25, verbose=True))
