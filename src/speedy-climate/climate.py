@@ -26,7 +26,7 @@ def run_HELIOS(name: str, instellation: float, spectral_type: str, R_planet: flo
         'scattering' : ['yes', 'yes'],
         'mixing_ratio' : [x_H2O, x_CO2]
     }
-        
+
     species_df = pd.DataFrame(species_data)
     species_df.to_csv(f'{HELIOS_PATH}/input/species_{name}.dat', sep='\t', index=False)
 
@@ -55,9 +55,9 @@ def run_HELIOS(name: str, instellation: float, spectral_type: str, R_planet: flo
     ]
 
     env = os.environ.copy()
-    env["PATH"] = '/data/pt426/cuda/cuda12/bin' + ":" + env["PATH"]
-    env["LD_LIBRARY_PATH"] = '/data/pt426/cuda/cuda12/lib64' + ":" + env.get("LD_LIBRARY_PATH", "")
-    env["DYLD_LIBRARY_PATH"] = '/data/pt426/cuda/cuda12/lib' + ":" + env.get("LD_LIBRARY_PATH", "")
+    #env["PATH"] = '/data/pt426/cuda/cuda12/bin' + ":" + env["PATH"]
+    #env["LD_LIBRARY_PATH"] = '/data/pt426/cuda/cuda12/lib64' + ":" + env.get("LD_LIBRARY_PATH", "")
+    #env["DYLD_LIBRARY_PATH"] = '/data/pt426/cuda/cuda12/lib' + ":" + env.get("LD_LIBRARY_PATH", "")
 
     if verbose:
         subprocess.run(command + parameters, cwd=HELIOS_PATH, env=env) 
@@ -65,7 +65,7 @@ def run_HELIOS(name: str, instellation: float, spectral_type: str, R_planet: flo
         subprocess.run(command + parameters, cwd=HELIOS_PATH, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     try:
-        atm_df = pd.read_table(f'{HELIOS_PATH}/output/{name}/{name}_tp.dat', sep='/s+', skiprows=1, engine='python')
+        atm_df = pd.read_table(f'{HELIOS_PATH}/output/{name}/{name}_tp.dat', sep='\s+', skiprows=1)
 
         # P = np.array(atm_df['press.[10^-6bar]']) * 10
         T = np.array(atm_df['temp.[K]'])
@@ -90,7 +90,7 @@ def run_HELIOS(name: str, instellation: float, spectral_type: str, R_planet: flo
         }
 
     except Exception as e :
-        
+
         result_dict = {
             "Run_ID": name,
             # "Zenith_Angle": zenith_angle,
@@ -107,9 +107,9 @@ def run_HELIOS(name: str, instellation: float, spectral_type: str, R_planet: flo
             "Status": str(e)
         }
 
-    shutil.rmtree(f'{HELIOS_PATH}/output/{name}', ignore_errors=True)
-    os.remove(f'{HELIOS_PATH}/input/species_{name}.dat')
-    
+    #shutil.rmtree(f'{HELIOS_PATH}/output/{name}', ignore_errors=True)
+    #os.remove(f'{HELIOS_PATH}/input/species_{name}.dat')
+
     return result_dict
 
 if __name__ == '__main__':
