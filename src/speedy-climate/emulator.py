@@ -8,7 +8,7 @@ from sklearn.gaussian_process.kernels import RBF, WhiteKernel, ConstantKernel
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 
-def make_GP_emulator(data_path='helios_results_1.csv'):
+def make_GP_emulator(data_path):
 
     data = pd.read_csv(data_path)
 
@@ -82,4 +82,4 @@ def make_GP_emulator(data_path='helios_results_1.csv'):
 
 if __name__ == '__main__':
 
-    make_GP_emulator('helios_runs_earth_tidally_locked.csv')
+    make_GP_emulator('climate_data/helios_runs_earth_tidally_locked.csv')
