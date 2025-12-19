@@ -8,21 +8,24 @@ from sklearn.gaussian_process.kernels import RBF, WhiteKernel, ConstantKernel
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 
+import joblib
+
 def make_GP_emulator(data_path):
 
     data = pd.read_csv(data_path)
 
     # print(data.columns)
 
-    input_features = ['Instellation (W/m^2)', 'P_CO2 (Pa)', 'P_H2O (Pa)', 'Albedo']
+    input_features = ['Instellation (W/m^2)', 'P_Surface (Pa)', 'x_CO2', 'x_H2O', 'Albedo']
     output_targets = ['Surface_Temp (K)']
 
     X = data[input_features].values
     y = data[output_targets].values
 
-    # log scale P_CO2 and P_H2O
+    # log scale P_surface, x_CO2 and x_H2O
     X[:, 1] = np.log10(X[:, 1])
     X[:, 2] = np.log10(X[:, 2])
+    X[:, 3] = np.log10(X[:, 3])
 
 
     X_train_full, X_test, y_train_full, y_test = train_test_split(
@@ -50,13 +53,15 @@ def make_GP_emulator(data_path):
     y_test_scaled  = y_scaler.transform(y_test)
 
     kernel = (
-        ConstantKernel(1.0, (1e-3, 1e5)) * RBF(length_scale=[1.0, 1.0, 1.0, 1.0], length_scale_bounds=(1e-2, 1e2)) 
+        ConstantKernel(1.0, (1e-3, 1e5)) * RBF(length_scale=[1.0, 1.0, 1.0, 1.0, 1.0], length_scale_bounds=(1e-2, 1e2)) 
         + WhiteKernel(noise_level=1e-5, noise_level_bounds=(1e-10, 1e-1))
     )
 
     gaussian_process = GaussianProcessRegressor(kernel=kernel, n_restarts_optimizer=20, alpha=1e-10)
 
+    print('Fitting Gaussian process...')
     gaussian_process.fit(X_train_scaled, y_train_scaled)
+    print('Fitted Gaussian process')
 
     print(f"Learned kernel: {gaussian_process.kernel_}")
     print(f"Log-marginal-likelihood: {gaussian_process.log_marginal_likelihood(gaussian_process.kernel_.theta):.3f}")
@@ -80,6 +85,41 @@ def make_GP_emulator(data_path):
     plt.savefig("accuracy_check.png")
     print("Saved accuracy_check.png")
 
+    joblib.dump(gaussian_process, 'emulator_data/gp_climate_emulator.pkl')
+    joblib.dump(x_scaler, 'emulator_data/inputs_scaler.pkl')
+    joblib.dump(y_scaler, 'emulator_data/output_scaler.pkl')
+
+
+class climate_emulator:
+
+    def __init__(self):
+        
+        print("Loading emulator...")
+        self.gaussian_process = joblib.load('emulator_data/gp_climate_emulator.pkl')
+        self.x_scaler = joblib.load('emulator_data/inputs_scaler.pkl')
+        self.y_scaler = joblib.load('emulator_data/output_scaler.pkl')
+        print("Emulator loaded.")
+
+    def get_temperature(self, instellation, P_surface, x_CO2, x_H2O, albedo):
+
+        log_p = np.log10(P_surface)
+        log_x_co2 = np.log10(x_CO2)
+        log_x_h2o = np.log10(x_H2O)
+
+        features_raw = np.array([[instellation, log_p, log_x_co2, log_x_h2o, albedo]])
+        features_scaled = self.x_scaler.transform(features_raw)
+
+        temp_scaled, std_scaled = self.gaussian_process.predict(features_scaled, return_std=True)
+
+        temp_kelvin = self.y_scaler.inverse_transform(temp_scaled.reshape(-1, 1))
+
+        uncertainty_kelvin = std_scaled[0] * self.y_scaler.scale_[0]
+
+        return temp_kelvin[0][0], uncertainty_kelvin
+
+
 if __name__ == '__main__':
 
-    make_GP_emulator('climate_data/helios_runs_earth_tidally_locked.csv')
+    cem = climate_emulator()
+
+    print(cem.get_temperature(1300, 1e5, 0.003, 0.01, 0.3))
