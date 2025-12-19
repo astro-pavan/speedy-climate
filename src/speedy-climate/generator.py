@@ -96,10 +96,10 @@ def run_batch_simulation(inputs, output_csv_name="helios_results.csv"):
         
 if __name__ == '__main__':
 
-    inputs = generate_input_parameters(10, 'G2', 0.25)
+    inputs = generate_input_parameters(1000, 'G2', 0.25)
     run_batch_simulation(inputs, 'helios_1000_runs_earth_rapid_rotator.csv')
 
-    inputs = generate_input_parameters(10, 'M5', 0.6666)
+    inputs = generate_input_parameters(1000, 'M5', 0.6666)
     run_batch_simulation(inputs, 'helios_1000_runs_earth_tidally_locked.csv')
 
 
