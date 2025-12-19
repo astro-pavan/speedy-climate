@@ -1,5 +1,7 @@
 *kdistr.h5
 opacity_data/scat_cross_sections.h5
+*.png
+*.pkl
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
